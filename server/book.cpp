@@ -14,13 +14,13 @@ void Book::removeOrder(Order* order) {
     if (order->next != nullptr) order->next->prev = order->prev;
 
     orders.erase(order->id);
-    delete order;
+    // delete order;
 };
 
 
 void Book::simplifyOrders(Order* bid, Order* ask, uint32_t price) {
-    FilledOrder *filledBid;
-    FilledOrder *filledAsk;
+    // FilledOrder *filledBid;
+    // FilledOrder *filledAsk;
     uint32_t quantity;
     if (bid->quantity > ask->quantity) {
         quantity = ask->quantity;
@@ -40,10 +40,10 @@ void Book::simplifyOrders(Order* bid, Order* ask, uint32_t price) {
     if (ask->limit != nullptr) ask->limit->totalQuantity -= quantity;
     
 
-    filledBid = new FilledOrder{bid->client, price, quantity};
-    filledAsk = new FilledOrder{ask->client, price, quantity};
-    filledOrders.produce(filledBid);
-    filledOrders.produce(filledAsk);
+    // filledBid = new FilledOrder{bid->client, price, quantity};
+    // filledAsk = new FilledOrder{ask->client, price, quantity};
+    // filledOrders.produce(filledBid);
+    // filledOrders.produce(filledAsk);
 };
 
 
@@ -71,7 +71,7 @@ void Book::addOrder(Order* order) {
                     }
                 }
                 if (!order->quantity) {
-                    delete order;
+                    // delete order;
                     return;
                 }
                 currAskOrder = nextAskOrder;
@@ -117,7 +117,7 @@ void Book::addOrder(Order* order) {
                     }
                 }
                 if (!order->quantity) {
-                    delete order;
+                    // delete order;
                     return;
                 }
                 currBidOrder = nextBidOrder;
@@ -179,10 +179,10 @@ void Book::printBook() {
 }
 
 void Book::cleanup() {
-    for (auto it = orders.begin(); it != orders.end(); ) {
-        delete it->second;
-        it = orders.erase(it);
-    }
+    // for (auto it = orders.begin(); it != orders.end(); ) {
+    //     delete it->second;
+    //     it = orders.erase(it);
+    // }
 
     for (auto it = bids.begin(); it != bids.end(); ) {
         delete it->second;

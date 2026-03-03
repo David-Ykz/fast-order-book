@@ -1,6 +1,3 @@
-test-book:
-	g++ -o bin/test_book test/test_book.cpp server/book.cpp && bin/test_book
-
 benchmark-random:
 	g++ -O3 -o bin/benchmark_random test/benchmark_random.cpp server/book.cpp && bin/benchmark_random
 valgrind-benchmark-random:

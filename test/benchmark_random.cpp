@@ -32,10 +32,15 @@ void generateRandomOrders(uint32_t startPrice, uint32_t endPrice, uint32_t minQu
 
 void executeTrades(Book &book) {
     for (int i = 0; i < NUM_ORDERS; i++) {
+        uint64_t orderId = orders[i]->id;
+        uint64_t clientId = orders[i]->client;
+        uint32_t price = orders[i]->price;
+        uint32_t volume = orders[i]->quantity;
+
         if (bidOrAsk[i]) {
-            book.addOrder<true>(orders[i]);
+            book.addOrder<true>(orderId, clientId, price, volume);
         } else {
-            book.addOrder<false>(orders[i]);
+            book.addOrder<false>(orderId, clientId, price, volume);
         }
     }
 }

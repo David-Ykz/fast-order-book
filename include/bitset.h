@@ -1,22 +1,30 @@
 #include <cstdint>
+#include <cstring>
 
 class Bitset {
 private:
     uint64_t summary = 0;
     uint64_t bins[64] = {0};
+    
 public:
+    inline bool empty() {
+        return summary == 0;
+    }
+
     inline void set(uint32_t price) {
         uint32_t binIndex = price >> 6;
-        uint32_t bitIndex = price & 64;
+        uint32_t bitIndex = price & 63;
         bins[binIndex] |= (1ULL << bitIndex);
         summary |= (1ULL << binIndex);
     }
 
     inline void unset(uint32_t price) {
         uint32_t binIndex = price >> 6;
-        uint32_t bitIndex = price & 64;
+        uint32_t bitIndex = price & 63;
         bins[binIndex] &= ~(1ULL << bitIndex);
-        summary &= ~(1ULL << binIndex);        
+        if (bins[binIndex] == 0) {
+            summary &= ~(1ULL << binIndex);        
+        }
     }
 
     inline int start() {
@@ -35,5 +43,10 @@ public:
         uint32_t bitIndex = 63 - __builtin_clzll(bins[binIndex]);
 
         return (binIndex << 6) | bitIndex;
+    }
+
+    inline void clear() {
+        memset(bins, 0, sizeof(bins));
+        summary = 0;
     }
 };

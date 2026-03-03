@@ -1,11 +1,14 @@
 #include "../include/book.h"
 #include <iostream>
-template void Book::addOrder<true>(Order*);
-template void Book::addOrder<false>(Order*);
+
+template void Book::addOrder<true>(Order* order);
+template void Book::addOrder<false>(Order* order);
+template void Book::addOrder<true>(uint64_t id, uint64_t client, uint32_t price, uint32_t quantity);
+template void Book::addOrder<false>(uint64_t id, uint64_t client, uint32_t price, uint32_t quantity);
 template void Book::cancelOrder<true>(uint64_t);
 template void Book::cancelOrder<false>(uint64_t);
 
-
+/* Removes the order from the book and deletes it */
 void Book::removeOrder(Order* order) {
     Limit* limit = order->limit;
     if (order == limit->head) limit->head = order->next;
@@ -14,13 +17,13 @@ void Book::removeOrder(Order* order) {
     if (order->next != nullptr) order->next->prev = order->prev;
 
     orders.erase(order->id);
-    // delete order;
+
+    order->~Order();
+    orderPool.free(order);
 };
 
-
+/* Matches a bid and an ask */
 void Book::simplifyOrders(Order* bid, Order* ask, uint32_t price) {
-    // FilledOrder *filledBid;
-    // FilledOrder *filledAsk;
     uint32_t quantity;
     if (bid->quantity > ask->quantity) {
         quantity = ask->quantity;
@@ -38,27 +41,20 @@ void Book::simplifyOrders(Order* bid, Order* ask, uint32_t price) {
 
     if (bid->limit != nullptr) bid->limit->totalQuantity -= quantity;
     if (ask->limit != nullptr) ask->limit->totalQuantity -= quantity;
-    
-
-    // filledBid = new FilledOrder{bid->client, price, quantity};
-    // filledAsk = new FilledOrder{ask->client, price, quantity};
-    // filledOrders.produce(filledBid);
-    // filledOrders.produce(filledAsk);
 };
 
-
+/* Tries to match the order. If the order was not fully matched, it adds the order to the book. */
 template <bool bidNotAsk>
 void Book::addOrder(Order* order) {
     if constexpr (bidNotAsk) { // Bid order
-        while (!asks.empty()) {
+        while (!askBitset.empty()) {
             // get highest ask
-            auto minAsk = asks.begin();
+            Limit* askLimit = asks[askBitset.start()];
+
             // if bid price is less than ask price, we can't match
-            if (order->price < minAsk->first) break;
+            if (order->price < askLimit->price) break;
 
-            Limit* askLimit = minAsk->second;
             Order* currAskOrder = askLimit->head;
-
             while (currAskOrder != nullptr) {
                 Order* nextAskOrder = currAskOrder->next;
                 // compare and fill the order with the lowest quantity
@@ -66,30 +62,24 @@ void Book::addOrder(Order* order) {
                 if (!currAskOrder->quantity) {
                     removeOrder(currAskOrder);
                     if (!askLimit->totalQuantity) {
-                        asks.erase(askLimit->price);
-                        delete askLimit;
+                        removeAskLimit(askLimit);
                     }
                 }
+                // order has been matched
                 if (!order->quantity) {
-                    // delete order;
                     return;
                 }
                 currAskOrder = nextAskOrder;
             }
-            // we filled as many orders as we can, now we add the bid to the book
-            // Limit* bidLimit = new Limit{order, order, order->quantity, order->price};
-            // order->limit = bidLimit;
-            // bids[order->price] = bidLimit;
-            // orders[order->id] = order;
-            // return;
         }
-        auto it = bids.find(order->price);
-        if (it == bids.end()) {
-            Limit* bidLimit = new Limit{order, order, order->quantity, order->price};
+        // done matching, now add order to book
+        if (bids[order->price] == nullptr) {
+            Limit* bidLimit = NewLimit(order);            
             order->limit = bidLimit;
             bids[order->price] = bidLimit;
+            bidBitset.set(order->price);
         } else {
-            Limit* bidLimit = it->second;
+            Limit* bidLimit = bids[order->price];
             bidLimit->tail->next = order;
             order->prev = bidLimit->tail;
             order->limit = bidLimit;
@@ -97,13 +87,12 @@ void Book::addOrder(Order* order) {
             bidLimit->totalQuantity += order->quantity;
         }
     } else { // Ask order
-        while (!bids.empty()) {
+        while (!bidBitset.empty()) {
             // get lowest bid
-            auto maxBid = --bids.end();
+            Limit* bidLimit = bids[bidBitset.end()];
             // if ask price is greater than bid price, we can't match
-            if (order->price > maxBid->first) break;
+            if (order->price > bidLimit->price) break;
 
-            Limit* bidLimit = maxBid->second;
             Order* currBidOrder = bidLimit->head;
             while (currBidOrder != nullptr) {
                 Order* nextBidOrder = currBidOrder->next;
@@ -112,30 +101,24 @@ void Book::addOrder(Order* order) {
                 if (!currBidOrder->quantity) {
                     removeOrder(currBidOrder);
                     if (!bidLimit->totalQuantity) {
-                        bids.erase(bidLimit->price);
-                        delete bidLimit;
+                        removeBidLimit(bidLimit);
                     }
                 }
+                // order has been matched
                 if (!order->quantity) {
-                    // delete order;
                     return;
                 }
                 currBidOrder = nextBidOrder;
             }
-            // we filled as many orders as we can, now we add the ask to the book
-            // Limit* askLimit = new Limit{order, order, order->quantity, order->price};
-            // order->limit = askLimit;
-            // asks[order->price] = askLimit;
-            // orders[order->id] = order;
-            // return;
         }
-        auto it = asks.find(order->price);
-        if (it == asks.end()) {
-            Limit* askLimit = new Limit{order, order, order->quantity, order->price};
+        // done matching, now add order to book
+        if (asks[order->price] == nullptr) {
+            Limit* askLimit = NewLimit(order);
             order->limit = askLimit;
             asks[order->price] = askLimit;
+            askBitset.set(order->price);
         } else {
-            Limit* askLimit = it->second;
+            Limit* askLimit = asks[order->price];
             askLimit->tail->next = order;
             order->prev = askLimit->tail;
             order->limit = askLimit;
@@ -146,6 +129,14 @@ void Book::addOrder(Order* order) {
     orders[order->id] = order;
 }
 
+/* Wrapper for addOrder */
+template <bool bidNotAsk>
+void Book::addOrder(uint64_t id, uint64_t client, uint32_t price, uint32_t quantity) {
+    Order* order = NewOrder(id, client, price, quantity);
+    addOrder<bidNotAsk>(order);
+}
+
+/* Cancels an order and removes it from the book */
 template <bool bidNotAsk>
 void Book::cancelOrder(uint64_t orderId) {
     Order* order = orders.find(orderId)->second;
@@ -154,43 +145,21 @@ void Book::cancelOrder(uint64_t orderId) {
     limit->totalQuantity -= order->quantity;
     if (!limit->totalQuantity) {
         if constexpr (bidNotAsk) {
-            bids.erase(limit->price);
+            bids[limit->price] = nullptr;
+            bidBitset.unset(limit->price);
         } else {
-            asks.erase(limit->price);
+            asks[limit->price] = nullptr;
+            askBitset.unset(limit->price);
         }
     }
 }
 
-bool Book::pollFilledOrders(FilledOrder* &filledOrder) {
-    return filledOrders.consume(filledOrder);
-}
-
-
-void Book::printBook() {
-    cout << "---------- Bids ----------" << endl;
-    for (auto it = bids.begin(); it != bids.end(); it++) {
-        cout << it->second << endl;
-    }
-
-    cout << "---------- Asks ----------" << endl;
-    for (auto it = asks.rbegin(); it != asks.rend(); it++) {
-        cout << it->second << endl;
-    }
-}
-
+/* Clears the book, destroys any objects created, and clears the bitsets */
 void Book::cleanup() {
-    // for (auto it = orders.begin(); it != orders.end(); ) {
-    //     delete it->second;
-    //     it = orders.erase(it);
-    // }
+    bids.clear();
+    asks.clear();
+    orders.clear();
 
-    for (auto it = bids.begin(); it != bids.end(); ) {
-        delete it->second;
-        it = bids.erase(it);
-    }
-
-    for (auto it = asks.begin(); it != asks.end(); ) {
-        delete it->second;
-        it = asks.erase(it);
-    }
+    bidBitset.clear();
+    askBitset.clear();
 }

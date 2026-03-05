@@ -25,3 +25,17 @@ inline ostream& operator<<(ostream& os, const Order* order) {
     return os;
 }
 
+struct FilledOrder {
+    uint64_t client;
+    uint32_t price;
+    uint32_t quantity;
+};
+
+inline ostream& operator<<(ostream& os, const FilledOrder *filledOrder) {
+    os << " | ClientId: " << filledOrder->client;
+    os << " | Price: " << filledOrder->price;
+    os << " | Quantity: " << filledOrder->quantity;
+
+    return os;
+}
+

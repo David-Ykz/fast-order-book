@@ -7,11 +7,11 @@ using namespace std;
 template<typename T>
 class Buffer {
 private:
-    static constexpr uint32_t capacity = 1024;
+    static constexpr uint32_t capacity = 4096;
     static constexpr uint32_t mask = capacity - 1;
     alignas(64) atomic_uint32_t producerIndex;
     alignas(64) atomic_uint32_t consumerIndex;
-    alignas(64) T data[capacity];
+    alignas(64) T data[capacity] = {0};
 public:
     Buffer() : producerIndex(0), consumerIndex(0) {}
 
@@ -29,5 +29,18 @@ public:
         output = data[c];
         consumerIndex.store((c + 1) & mask, memory_order_release);
         return true;
+    }
+
+    inline bool peek(T& output) {
+        const uint32_t c = consumerIndex.load(memory_order_relaxed);
+        if (c == producerIndex.load(memory_order_acquire)) return false;
+        output = data[c];
+        return true;
+    }
+    
+    inline void clear() {
+        data[capacity] = {0};
+        producerIndex = 0;
+        consumerIndex = 0;
     }
 };

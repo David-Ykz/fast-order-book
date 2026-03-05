@@ -30,7 +30,9 @@ private:
     Bitset bidBitset;
     Bitset askBitset;
     unordered_map<uint64_t, Order*> orders;
+    Buffer<FilledOrder*> filledOrders;
     boost::pool<> orderPool{sizeof(Order)};
+    boost::pool<> filledOrderPool{sizeof(FilledOrder)};
     boost::pool<> limitPool{sizeof(Limit)};
 
     inline Order* NewOrder(uint64_t id, uint64_t client, uint32_t price, uint32_t quantity) {
@@ -44,6 +46,15 @@ private:
         order->prev = nullptr;
         
         return order;
+    }
+    inline FilledOrder* NewFilledOrder(uint64_t client, uint32_t price, uint32_t quantity) {
+        void* mem = filledOrderPool.malloc();
+        FilledOrder* filledOrder = new (mem) FilledOrder();
+        filledOrder->client = client;
+        filledOrder->price = price;
+        filledOrder->quantity = quantity;
+        
+        return filledOrder;
     }
     inline Limit* NewLimit(Order* order) {
         void* limitMem = limitPool.malloc();
@@ -83,11 +94,17 @@ public:
     inline size_t numOrders() {
         return orders.size();
     }
+    inline uint32_t getBid() {
+        return bids[bidBitset.end()]->price;
+    }
+    inline uint32_t getAsk() {
+        return asks[askBitset.start()]->price;
+    }
 
     template <bool bidNotAsk>
     void addOrder(uint64_t id, uint64_t client, uint32_t price, uint32_t quantity);
     template <bool bidNotAsk>
     void cancelOrder(uint64_t orderId);
-    void printBook();
+
     void cleanup();
 };

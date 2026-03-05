@@ -1,4 +1,4 @@
-#include "../include/book.h"
+#include "book.h"
 #include <iostream>
 
 template void Book::addOrder<true>(Order* order);
@@ -41,6 +41,11 @@ void Book::simplifyOrders(Order* bid, Order* ask, uint32_t price) {
 
     if (bid->limit != nullptr) bid->limit->totalQuantity -= quantity;
     if (ask->limit != nullptr) ask->limit->totalQuantity -= quantity;
+
+    // FilledOrder* filledBid = NewFilledOrder(bid->client, price, quantity);
+    // FilledOrder* filledAsk = NewFilledOrder(ask->client, price, quantity);
+    // filledOrders.produce(filledBid);
+    // filledOrders.produce(filledAsk);
 };
 
 /* Tries to match the order. If the order was not fully matched, it adds the order to the book. */
@@ -159,6 +164,7 @@ void Book::cleanup() {
     bids.clear();
     asks.clear();
     orders.clear();
+    filledOrders.clear();
 
     bidBitset.clear();
     askBitset.clear();

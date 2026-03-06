@@ -22,6 +22,17 @@ public:
         data[p] = value;
         producerIndex.store(next, memory_order_release);
     }
+
+    inline void produceTwo(const T& v1, const T& v2) {
+        const uint32_t p = producerIndex.load(memory_order_relaxed);
+        const uint32_t next = (p + 1) & mask;
+        const uint32_t nextNext = (p + 2) & mask;
+
+        data[p] = v1;
+        data[next] = v2;
+
+        producerIndex.store(nextNext, memory_order_release);
+    }
     
     inline bool consume(T& output) {
         const uint32_t c = consumerIndex.load(memory_order_relaxed);

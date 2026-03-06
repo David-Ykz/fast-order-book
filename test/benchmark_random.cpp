@@ -2,6 +2,7 @@
 #include <iostream>
 #include <random>
 #include <chrono>
+#include "../client/stock_generator.h"
 
 #define NUM_ORDERS 10000000
 
@@ -38,9 +39,9 @@ void executeTrades(Book &book) {
         uint32_t volume = orders[i]->quantity;
 
         if (bidOrAsk[i]) {
-            book.addOrder<true>(orderId, clientId, price, volume);
+            book.addOrder<true>(clientId, price, volume);
         } else {
-            book.addOrder<false>(orderId, clientId, price, volume);
+            book.addOrder<false>(clientId, price, volume);
         }
     }
 }
@@ -48,6 +49,18 @@ void executeTrades(Book &book) {
 
 
 int main() {
+    // StockParameters p1{1, 0.0001, 0.01, 1};
+    // StockParameters p2{1, 0.0001, 0.02, 1};
+
+    // // StockParameters p;
+    // GBMGenerator generator1(p1);
+    // GBMGenerator generator2(p2);
+    // for (int i = 0; i < 10000; i++) {
+    //     cout << generator1.generatePrice() << " ";
+    //     cout << generator2.generatePrice() << " ";
+    //     cout << endl;
+    // }
+
     generateRandomOrders(1, 4095, 1, 1000000, 2768464, 3945746, 1057837);
     Book book = Book(0);
     uint64_t startTime = tick();
@@ -56,7 +69,11 @@ int main() {
 
     // book.printBook();
     // cout << endl;
-    cout << endTime - startTime << " ms" << endl;
+    // cout << endTime - startTime << " ms" << endl;
+    cout << "Time per order: " << (endTime - startTime) * 1000000.0/(NUM_ORDERS * 1.0) << " ns" << endl;
+    cout << "Total time: " << (endTime - startTime)/(1000 * 1.0) << " s" << endl;
+
+
 
     book.cleanup();
     for (int i = 0; i < NUM_ORDERS; i++) {

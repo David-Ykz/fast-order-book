@@ -3,8 +3,8 @@
 
 template void Book::addOrder<true>(Order* order);
 template void Book::addOrder<false>(Order* order);
-template void Book::addOrder<true>(uint64_t id, uint64_t client, uint32_t price, uint32_t quantity);
-template void Book::addOrder<false>(uint64_t id, uint64_t client, uint32_t price, uint32_t quantity);
+template void Book::addOrder<true>(uint64_t client, uint32_t price, uint32_t quantity);
+template void Book::addOrder<false>(uint64_t client, uint32_t price, uint32_t quantity);
 template void Book::cancelOrder<true>(uint64_t);
 template void Book::cancelOrder<false>(uint64_t);
 
@@ -46,6 +46,11 @@ void Book::simplifyOrders(Order* bid, Order* ask, uint32_t price) {
     // FilledOrder* filledAsk = NewFilledOrder(ask->client, price, quantity);
     // filledOrders.produce(filledBid);
     // filledOrders.produce(filledAsk);
+
+    filledOrders.produceTwo(FilledOrder{bid->client, price, quantity}, FilledOrder{ask->client, price, quantity});
+
+    // filledOrders.produce(FilledOrder{bid->client, price, quantity});
+    // filledOrders.produce(FilledOrder{ask->client, price, quantity});
 };
 
 /* Tries to match the order. If the order was not fully matched, it adds the order to the book. */
@@ -136,8 +141,8 @@ void Book::addOrder(Order* order) {
 
 /* Wrapper for addOrder */
 template <bool bidNotAsk>
-void Book::addOrder(uint64_t id, uint64_t client, uint32_t price, uint32_t quantity) {
-    Order* order = NewOrder(id, client, price, quantity);
+void Book::addOrder(uint64_t client, uint32_t price, uint32_t quantity) {
+    Order* order = NewOrder(orderIdCounter++, client, price, quantity);
     addOrder<bidNotAsk>(order);
 }
 

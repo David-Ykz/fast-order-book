@@ -25,12 +25,14 @@
 class Book {
 private:
     uint32_t ticker;
+    uint64_t orderIdCounter = 0;
+
     vector<Limit*> bids;
     vector<Limit*> asks;
     Bitset bidBitset;
     Bitset askBitset;
     unordered_map<uint64_t, Order*> orders;
-    Buffer<FilledOrder*> filledOrders;
+    Buffer<FilledOrder> filledOrders;
     boost::pool<> orderPool{sizeof(Order)};
     boost::pool<> filledOrderPool{sizeof(FilledOrder)};
     boost::pool<> limitPool{sizeof(Limit)};
@@ -102,7 +104,7 @@ public:
     }
 
     template <bool bidNotAsk>
-    void addOrder(uint64_t id, uint64_t client, uint32_t price, uint32_t quantity);
+    void addOrder(uint64_t client, uint32_t price, uint32_t quantity);
     template <bool bidNotAsk>
     void cancelOrder(uint64_t orderId);
 

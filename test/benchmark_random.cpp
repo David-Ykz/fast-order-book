@@ -2,7 +2,6 @@
 #include <iostream>
 #include <random>
 #include <chrono>
-#include "../client/stock_generator.h"
 
 #define NUM_ORDERS 10000000
 
@@ -49,18 +48,6 @@ void executeTrades(Book &book) {
 
 
 int main() {
-    // StockParameters p1{1, 0.0001, 0.01, 1};
-    // StockParameters p2{1, 0.0001, 0.02, 1};
-
-    // // StockParameters p;
-    // GBMGenerator generator1(p1);
-    // GBMGenerator generator2(p2);
-    // for (int i = 0; i < 10000; i++) {
-    //     cout << generator1.generatePrice() << " ";
-    //     cout << generator2.generatePrice() << " ";
-    //     cout << endl;
-    // }
-
     generateRandomOrders(1, 4095, 1, 1000000, 2768464, 3945746, 1057837);
     Book book = Book(0);
     uint64_t startTime = tick();

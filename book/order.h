@@ -32,10 +32,25 @@ struct FilledOrder {
 };
 
 inline ostream& operator<<(ostream& os, const FilledOrder *filledOrder) {
-    os << " | ClientId: " << filledOrder->client;
+    os << "ClientId: " << filledOrder->client;
     os << " | Price: " << filledOrder->price;
     os << " | Quantity: " << filledOrder->quantity;
 
     return os;
 }
 
+struct ClientOrder {
+    uint64_t client;
+    uint32_t price;
+    uint32_t quantity;
+    bool bidNotAsk;
+};
+
+inline ostream& operator<<(ostream& os, const ClientOrder* clientOrder) {
+    os << " ClientId: " << clientOrder->client;
+    os << " | Price: " << clientOrder->price;
+    os << " | Quantity: " << clientOrder->quantity;
+    os << " | Bid: " << clientOrder->bidNotAsk;
+
+    return os;
+}

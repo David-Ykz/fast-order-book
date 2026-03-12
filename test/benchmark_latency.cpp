@@ -1,24 +1,13 @@
-#include "../book/book.h"
-#include <iostream>
-#include <random>
-#include <chrono>
-#include "../client/stock_generator.h"
-
-struct ClientOrder {
-    uint64_t client;
-    uint32_t price;
-    uint32_t quantity;
-    bool bidNotAsk;
-};
-
-inline uint64_t tick() noexcept {
-    return chrono::duration_cast<chrono::nanoseconds>(chrono::system_clock::now().time_since_epoch()).count();
-}
+#include "benchmark_latency.h"
 
 ClientOrder* generateOrders(GBMGenerator& gbmGenerator, uint32_t spreadWidth, uint32_t minQuantity, uint32_t maxQuantity, size_t numOrders, double bidNotAskTendency) {
     uint32_t targetPrice = gbmGenerator.generatePrice();
     uint32_t minPrice = targetPrice > spreadWidth ? targetPrice - spreadWidth : 1;
-    uint32_t maxPrice = min(targetPrice + spreadWidth, static_cast<uint32_t>(4096));
+    uint32_t maxPrice = min(targetPrice + spreadWidth, static_cast<uint32_t>(4095));
+
+    if (minPrice > maxPrice) {
+        minPrice = maxPrice - spreadWidth;
+    }
 
     mt19937 priceGenerator(random_device{}());
     mt19937 quantityGenerator(random_device{}());
@@ -62,8 +51,8 @@ double test() {
 
     Book book = Book(0);
 
-    constexpr uint64_t numIterations = 1000;
-    constexpr size_t numOrders = 10000;
+    constexpr uint64_t numIterations = 10000;
+    constexpr size_t numOrders = 1000;
     uint64_t timeTaken = 0;
 
     for (int i = 0; i < numIterations; i++) {
@@ -74,7 +63,7 @@ double test() {
         uint64_t endTime = tick();
 
         timeTaken += endTime - startTime;
-        delete orders;
+        delete[] orders;
     }
 
     // cout << "Time per order: " << timeTaken/(numOrders * numIterations * 1.0) << " ns" << endl;
@@ -85,15 +74,18 @@ double test() {
     return timeTaken/(numOrders * numIterations * 1.0);
 }
 
-int main() {
-    constexpr int numTests = 10;
-    double totalTime = 0;
+// int main() {
+//     constexpr int numTests = 100;
+//     double totalTime = 0;
 
-    for (int i = 0; i < numTests; i++) {
-        totalTime += test();
-    }
-    
-    cout << totalTime / (numTests * 1.0) << endl;
+//     for (int i = 0; i < numTests; i++) {
+//         double time = test();
+//         cout << time << endl;
+//         totalTime += time;
+//     }
+//     cout << endl;
+//     cout << totalTime / (numTests * 1.0) << endl;
 
-    return 0;
-}
+//     return 0;
+// }
+

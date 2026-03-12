@@ -1,3 +1,5 @@
+#pragma once
+
 #include "order.h"
 #include "limit.h"
 #include "bitset.h"
@@ -7,24 +9,8 @@
 #include <ostream>
 #include <boost/pool/object_pool.hpp>
 
-// struct FilledOrder {
-//     uint64_t client;
-//     uint32_t price;
-//     uint32_t quantity;
-// };
-
-// inline ostream& operator<<(ostream& os, const FilledOrder* filledOrder) {
-//     os << "ClientId: " << filledOrder->client;
-//     os << " | Price: " << filledOrder->price;
-//     os << " | Quantity: " << filledOrder->quantity;
-
-//     return os;
-// }
-
-
 class Book {
 private:
-    uint32_t ticker;
     uint64_t orderIdCounter = 0;
 
     vector<Limit*> bids;
@@ -32,9 +18,7 @@ private:
     Bitset bidBitset;
     Bitset askBitset;
     unordered_map<uint64_t, Order*> orders;
-    Buffer<FilledOrder> filledOrders;
     boost::pool<> orderPool{sizeof(Order)};
-    boost::pool<> filledOrderPool{sizeof(FilledOrder)};
     boost::pool<> limitPool{sizeof(Limit)};
 
     inline Order* NewOrder(uint64_t id, uint64_t client, uint32_t price, uint32_t quantity) {
@@ -49,15 +33,6 @@ private:
         
         return order;
     }
-    inline FilledOrder* NewFilledOrder(uint64_t client, uint32_t price, uint32_t quantity) {
-        void* mem = filledOrderPool.malloc();
-        FilledOrder* filledOrder = new (mem) FilledOrder();
-        filledOrder->client = client;
-        filledOrder->price = price;
-        filledOrder->quantity = quantity;
-        
-        return filledOrder;
-    }
     inline Limit* NewLimit(Order* order) {
         void* limitMem = limitPool.malloc();
         Limit* limit = new (limitMem) Limit();
@@ -71,13 +46,11 @@ private:
     inline void removeAskLimit(Limit *askLimit) {
         askBitset.unset(askLimit->price);
         asks[askLimit->price] = nullptr;
-        askLimit->~Limit();
         limitPool.free(askLimit);
     }
     inline void removeBidLimit(Limit *bidLimit) {
         bids[bidLimit->price] = nullptr;
         bidBitset.unset(bidLimit->price);
-        bidLimit->~Limit();
         limitPool.free(bidLimit);
     }
 
@@ -88,6 +61,9 @@ private:
 
 
 public:
+    uint32_t ticker;
+    Buffer<FilledOrder> filledOrders;
+
     Book(uint32_t ticker) : ticker(ticker) {
         asks.assign(4096, nullptr);
         bids.assign(4096, nullptr);
@@ -95,12 +71,6 @@ public:
     
     inline size_t numOrders() {
         return orders.size();
-    }
-    inline uint32_t getBid() {
-        return bids[bidBitset.end()]->price;
-    }
-    inline uint32_t getAsk() {
-        return asks[askBitset.start()]->price;
     }
 
     template <bool bidNotAsk>

@@ -17,8 +17,6 @@ void Book::removeOrder(Order* order) {
     if (order->next != nullptr) order->next->prev = order->prev;
 
     orders.erase(order->id);
-
-    order->~Order();
     orderPool.free(order);
 };
 
@@ -42,15 +40,7 @@ void Book::simplifyOrders(Order* bid, Order* ask, uint32_t price) {
     if (bid->limit != nullptr) bid->limit->totalQuantity -= quantity;
     if (ask->limit != nullptr) ask->limit->totalQuantity -= quantity;
 
-    // FilledOrder* filledBid = NewFilledOrder(bid->client, price, quantity);
-    // FilledOrder* filledAsk = NewFilledOrder(ask->client, price, quantity);
-    // filledOrders.produce(filledBid);
-    // filledOrders.produce(filledAsk);
-
     filledOrders.produceTwo(FilledOrder{bid->client, price, quantity}, FilledOrder{ask->client, price, quantity});
-
-    // filledOrders.produce(FilledOrder{bid->client, price, quantity});
-    // filledOrders.produce(FilledOrder{ask->client, price, quantity});
 };
 
 /* Tries to match the order. If the order was not fully matched, it adds the order to the book. */
@@ -83,6 +73,7 @@ void Book::addOrder(Order* order) {
             }
         }
         // done matching, now add order to book
+        order = NewOrder(order->id, order->client, order->price, order->quantity);
         if (bids[order->price] == nullptr) {
             Limit* bidLimit = NewLimit(order);            
             order->limit = bidLimit;
@@ -122,6 +113,7 @@ void Book::addOrder(Order* order) {
             }
         }
         // done matching, now add order to book
+        order = NewOrder(order->id, order->client, order->price, order->quantity);
         if (asks[order->price] == nullptr) {
             Limit* askLimit = NewLimit(order);
             order->limit = askLimit;
@@ -142,8 +134,8 @@ void Book::addOrder(Order* order) {
 /* Wrapper for addOrder */
 template <bool bidNotAsk>
 void Book::addOrder(uint64_t client, uint32_t price, uint32_t quantity) {
-    Order* order = NewOrder(orderIdCounter++, client, price, quantity);
-    addOrder<bidNotAsk>(order);
+    Order order = Order{orderIdCounter++, client, price, quantity};
+    addOrder<bidNotAsk>(&order);
 }
 
 /* Cancels an order and removes it from the book */
@@ -151,8 +143,8 @@ template <bool bidNotAsk>
 void Book::cancelOrder(uint64_t orderId) {
     Order* order = orders.find(orderId)->second;
     Limit* limit = order->limit;
-    removeOrder(order);
     limit->totalQuantity -= order->quantity;
+    removeOrder(order);
     if (!limit->totalQuantity) {
         if constexpr (bidNotAsk) {
             bids[limit->price] = nullptr;
@@ -161,11 +153,32 @@ void Book::cancelOrder(uint64_t orderId) {
             asks[limit->price] = nullptr;
             askBitset.unset(limit->price);
         }
+        limit->~Limit();
+        limitPool.free(limit);
     }
 }
 
 /* Clears the book, destroys any objects created, and clears the bitsets */
 void Book::cleanup() {
+    for (const auto& pair : orders) {
+        pair.second->~Order();
+        orderPool.free(pair.second);
+    }
+    for (int i = 0; i < bids.size(); i++) {
+        if (bids[i] != nullptr) {
+            bids[i]->~Limit();
+            limitPool.free(bids[i]);
+        }
+    }
+    for (int i = 0; i < asks.size(); i++) {
+        if (asks[i] != nullptr) {
+            asks[i]->~Limit();
+            limitPool.free(asks[i]);
+        }
+    }
+    orderPool.purge_memory();
+    limitPool.purge_memory();
+
     bids.clear();
     asks.clear();
     orders.clear();

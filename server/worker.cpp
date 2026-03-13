@@ -7,10 +7,21 @@ void Worker::run() {
     StockParameters params{1, 0.0001, 0.01, 1};
     GBMGenerator generator(params);
 
+    broadcasterThread = thread([this]() {
+        pinThreadToCore(this->book.ticker - 8000 + 2);
+        broadcaster.listenAndBroadcast(ref(running)); 
+    });
+
     for (int i = 0; i < numIterations; i++) {
-        cout << "generating" << endl;
         ClientOrder* orders = generateOrders(generator, 50, 1, 10000, numOrders, 0.5);
         executeTrades(book, orders, numOrders);
         delete[] orders;
     }
+}
+
+void Worker::pinThreadToCore(int core) {
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(core, &cpuset);
+    pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
 }

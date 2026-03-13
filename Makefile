@@ -16,13 +16,13 @@ run-benchmark-latency:
 	bin/benchmark_latency
 
 compile-server:
-	g++ -O3 -flto -march=native -o bin/server server/main.cpp server/worker.cpp server/broadcaster.cpp test/benchmark_latency.cpp book/book.cpp
+	g++ -O3 -flto -march=native -o bin/server server/server.cpp server/worker.cpp server/broadcaster.cpp test/benchmark_latency.cpp book/book.cpp
 run-server:
 	bin/server
 compile-client:
 	g++ -O3 -flto -march=native -o bin/client client/listener.cpp
 run-client:
-	bin/client 1024
+	bin/client 8002
 
 
 test-benchmark-random: compile-benchmark-random run-benchmark-random

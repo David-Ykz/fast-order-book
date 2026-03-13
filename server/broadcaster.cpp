@@ -14,7 +14,6 @@ void Broadcaster::listenAndBroadcast(atomic_bool &running) {
         FilledOrder filledOrder;
         bool hasData = book->filledOrders.consume(filledOrder);
         if (!hasData) continue;
-        cout << "broadcasting" << endl;
         TradeEvent msg{filledOrder.client, filledOrder.price, filledOrder.quantity, book->ticker};
         sendto(multicastSock, &msg, sizeof(msg), 0, (struct sockaddr*)&multicastAddr, sizeof(multicastAddr));
     }

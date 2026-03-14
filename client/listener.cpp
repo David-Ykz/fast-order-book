@@ -6,11 +6,21 @@
 #include <unistd.h>
 #include "../server/message.h"
 #include <string>
+#include <fstream>
+#include <random>
+
+using namespace std;
 
 int main(int argc, char* argv[]) {
-    uint32_t ticker = std::stoi(argv[1]);
+    uint32_t ticker = stoi(argv[1]);
     int port = htons(ticker);
     const char* group = "239.0.0.1";
+
+    random_device rd;
+    mt19937 generator(rd());
+    uniform_int_distribution<> distribution(1000, 10000);
+    string filename = "logs/" + to_string(ticker) + "_" + to_string(distribution(generator)) + ".txt";
+    ofstream output(filename);
 
     // create the socket
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
@@ -39,13 +49,13 @@ int main(int argc, char* argv[]) {
     }
 
     TradeEvent msg;
+    int i = 0;
     while (true) {
         ssize_t len = recvfrom(sock, &msg, sizeof(msg), 0, NULL, NULL);
-        if (len > 0) {
-            std::cout << "Ticker: " << msg.ticker 
-                      << " | Client: " << msg.client 
-                      << " | Price: " << msg.price 
-                      << " | Qty: " << msg.quantity << std::endl;
+        // save every other tick since server broadcasts both bid and ask orders
+        if (len > 0 && i++ % 2) {
+            output << msg.price << " " << msg.quantity << endl;
+            output.flush(); 
         }
     }
 

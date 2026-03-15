@@ -16,15 +16,15 @@ for filepath in glob.glob(os.path.join(LOGS_DIR, '*.txt')):
             continue
 
         # load data
-        df = pd.read_csv(filepath, sep=' ', names=['price', 'qty'])
+        df = pd.read_csv(filepath, sep=' ', names=['timestamp', 'price', 'qty'])
         if df.empty:
             continue
 
         df.index = pd.to_datetime(df.index, unit='s')
         
         # convert to candlesticks
-        ohlc = df['price'].resample('1Min').ohlc()
-        ohlc['volume'] = df['qty'].resample('1Min').sum()
+        ohlc = df['price'].resample('100s').ohlc()
+        ohlc['volume'] = df['qty'].resample('100s').sum()
         ohlc = ohlc.dropna()
 
         filename = os.path.basename(filepath).replace('.txt', '.png')

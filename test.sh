@@ -7,11 +7,6 @@ PORTS=(8002 8004)
 cleanup() {
     echo "Shutting down clients and server..."
     kill $(jobs -p) 2>/dev/null
-    
-    echo "Generating charts..."
-    python3 dashboard/display.py
-    
-    exit
 }
 
 trap cleanup SIGINT SIGTERM
@@ -40,3 +35,7 @@ echo "--- Starting Server ---"
 $SERVER_BIN
 
 cleanup
+
+echo "Generating charts..."
+python3 dashboard/display.py
+exit

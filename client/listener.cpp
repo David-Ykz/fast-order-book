@@ -8,6 +8,7 @@
 #include <string>
 #include <fstream>
 #include <random>
+#include <chrono>
 
 using namespace std;
 
@@ -52,9 +53,11 @@ int main(int argc, char* argv[]) {
     int i = 0;
     while (true) {
         ssize_t len = recvfrom(sock, &msg, sizeof(msg), 0, NULL, NULL);
+        auto now = chrono::system_clock::now();
+        auto timestamp = chrono::duration_cast<chrono::nanoseconds>(now.time_since_epoch()).count();   
         // save every other tick since server broadcasts both bid and ask orders
         if (len > 0 && i++ % 2) {
-            output << msg.price << " " << msg.quantity << endl;
+            output << timestamp << " " << msg.price << " " << msg.quantity << endl;
             output.flush(); 
         }
     }
